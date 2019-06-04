@@ -7,7 +7,7 @@ const SQL_SELECT_FILM_WHERE_PAGE =
     'select film_id, title, description from film where title like ? limit ? offset ?';
 
 const SQL_SELECT_FILM_WHERE_PAGE_COUNT = 
-    'select COUNT(*) from film where title like ?';
+    'select COUNT(*) as movie_count from film where title like ?';
     
 
 //Load the libraries
@@ -31,7 +31,7 @@ app.set('views', __dirname + '/views');
 
 app.get('/search', (req, resp) => {
     const q = req.query.q;
-    console.log('q: ', q);
+    //console.log('q: ', q);
     pool.getConnection((err, conn) => {
         if (err) {
             resp.status(500);
@@ -48,35 +48,39 @@ app.get('/search', (req, resp) => {
                 resp.type('text/plain');
                 resp.send(err);
                 return;
-            }
-+
-            console.log("a");
+            }        
             
-            var isEmpty;
-            if(result.length == 0)
-                isEmpty = true;
-            else
-                isEmpty = false;
-                
-                let numOfRecords;
+            let numOfRecords;
             conn.query(SQL_SELECT_FILM_WHERE_PAGE_COUNT ,
                 [`%${q}%`],
-                (erro, recordcount) => {
+                (err1, recordcount) => {
+                    if (err1) {
+                        resp.status(500);
+                        resp.type('text/plain');
+                        resp.send(err);
+                        return;
+                    }   
                     conn.release();
-                    //console.log(recordcount[0]);
-                    console.log(JSON.parse(JSON.stringify(recordcount).replace('(*)',''))[0].COUNT);
 
-                    numOfRecords = JSON.parse(JSON.stringify(recordcount).replace('(*)',''))[0].COUNT;
+                    numOfRecords =recordcount[0].movie_count;
                 
-            
+                    let isEmpty;
+                    if(result.length == 0)
+                    {
+                        isEmpty = true;
+                    }
+                    else
+                    {
+                        isEmpty = false;
+                    }
 
-            resp.status(200);
-            resp.type('text/html')
-            resp.render('movies', {
-                movies:result, layout:false,
-                NoResults: isEmpty,
-                count: numOfRecords
-             });
+                    resp.status(200);
+                    resp.type('text/html')
+                    resp.render('movies', {
+                        movies:result, layout:false,
+                        NoResults: isEmpty,
+                        count: numOfRecords
+                    });
             })
             // resp.status(200);
             // resp.send(result);
